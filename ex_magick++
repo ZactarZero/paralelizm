@@ -1,28 +1,74 @@
-#include <Magick++.h>
+#include "stdafx.h"
 #include <iostream>
+#include <stdio.h>
+#include <omp.h>
+#include <stdlib.h>
+#include <chrono>//tempo
+
 using namespace std;
-using namespace Magick;
-int main(int argc, char **argv)
-{
-	// Construct the image object. Seperating image construction from the
-	// the read operation ensures that a failure to read the image file
-	// doesn't render the image object useless.
-	Image image;
+using  ms = chrono::microseconds;
+using get_time = chrono::steady_clock;
 
-	try {
-		// Read a file into image object
-		image.read("girl.jpeg");
+#define TRHEADCOUNT 80
+#define ARRTAM 20000
 
-		// Crop the image to specified size (width, height, xOffset, yOffset)
-		image.crop(Geometry(100, 100, 100, 100));
+int main()
+{	
 
-		// Write the image to a file
-		image.write("x.jpeg");
-	}
-	catch (Exception &error_)
+	//Teste de startup-----------------------------------------------------------------
+	int num_thds, myid;
+	omp_set_num_threads(TRHEADCOUNT);
+#pragma omp parallel
 	{
-		cout << "Caught exception: " << error_.what() << endl;
-		return 1;
+		num_thds = omp_get_num_threads(); //threads criados
+		myid = omp_get_thread_num(); //Numero de identificação do thread
+		printf(" Hello world do thd no: %d de %d trheads!\n", myid, (num_thds - 1));
 	}
-	return 0;
+	//Fim do teste de startup----------------------------------------------------------
+
+	int i;
+	double *A, *B, *C;
+
+	//Aloca e inicializa arrays
+	A = (double *)malloc(ARRTAM * sizeof(double));
+	B = (double *)malloc(ARRTAM * sizeof(double));
+	C = (double *)malloc(ARRTAM * sizeof(double));
+
+	//Adicionar dados nos arrays
+	for (i = 0; i < ARRTAM; i++)
+	{
+		A[i] = i * 2;
+		B[i] = i * 2;
+	}
+
+	auto start = get_time::now(); //contagem do tempo
+	//---------------------------------------------------------------------------------
+#pragma omp parallel for default(none) shared(A,B,C)
+	for (i = 0; i < ARRTAM; i++)
+	{
+		C[i] = A[i] + B[i];
+	}
+
+	/*printa
+	printf("\n Vetores trabalhados: \n");
+	for (i = 0; i < ARRTAM; i++)
+	{
+		printf("\t %f  +  %f  =  %f\n", A[i], B[i], C[i]);
+	}
+	*/
+	free(A);
+	free(B);
+	free(C);
+
+
+
+	//---------------------------------------------------------------------------------
+	auto end = get_time::now();//contagem do tempo
+	auto diff = end - start;
+	cout << "Tempo passado  de:  " << chrono::duration_cast<ms>(diff).count() << " ms " << endl;
+
+	printf("Tudo feito\n");
+	system("PAUSE");
+    return 0;
 }
+
