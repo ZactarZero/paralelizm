@@ -1,0 +1,54 @@
+// OpemMPwithOpenCV.cpp : define o ponto de entrada para o aplicativo do console.
+//
+
+#include "stdafx.h"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include <stdlib.h>
+#include <stdio.h>
+#include <iostream>
+#include <omp.h>
+#include <chrono>
+
+using namespace cv;
+using namespace std;
+using ms = chrono::milliseconds;
+using get_time = chrono::steady_clock;
+
+/** @function main */
+int main(int argc, char** argv)
+{
+
+	Mat src, src_gray;
+	Mat grad;
+	int scale = 1;
+	int delta = 0;
+	int ddepth = CV_16S;
+
+	auto start = get_time::now(); //contagem do tempo
+
+	#pragma omp for
+	for (int i = 0; i < 15; i++) {
+		src = imread(to_string(i) + ".tif");
+		if (!src.data)
+		{
+			return -1;
+		}
+		GaussianBlur(src, src, Size(3, 3), 0, 0, BORDER_DEFAULT);
+		cvtColor(src, src_gray, CV_BGR2GRAY);
+		Mat grad_x, grad_y;
+		Mat abs_grad_x, abs_grad_y;
+		Sobel(src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
+		convertScaleAbs(grad_x, abs_grad_x);
+		Sobel(src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT);
+		convertScaleAbs(grad_y, abs_grad_y);
+		addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad);
+		imwrite(to_string(i) + "r.tif", grad);
+	}
+	
+	auto end = get_time::now();//contagem do tempo
+	auto diff = end - start;
+	cout << "Tempo passado de: " << chrono::duration_cast<ms>(diff).count() << " ms " << endl;
+
+	return 0;
+}
